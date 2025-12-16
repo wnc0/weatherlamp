@@ -7,7 +7,7 @@ st.title("🌦 Weather Emotion Lamp")
 
 city = st.text_input("请输入城市名", "Seoul")
 
-API_KEY = "YOUR_API_KEY_HERE"  # ← 换成你自己的
+API_KEY = "f79b327c6e33c90c48948f41a5b62e38"  # ← 换成你自己的
 url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
 
 weather = None
@@ -61,3 +61,4 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
