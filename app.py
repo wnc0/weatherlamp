@@ -16,22 +16,32 @@ def get_weather(city):
     )
     return requests.get(url).json()
 
-# ✅ 唯一正确判断方式：weather.id
+# ======================
+# ✅ 方案 C：双保险判断
+# ======================
 def get_weather_type(data):
     wid = data["weather"][0]["id"]
 
+    # ① 最优先：真实降水字段（展示用，最稳定）
+    if "snow" in data:
+        return "snow"
+    if "rain" in data:
+        return "rain"
+
+    # ② 次优先：官方天气代码
     if 200 <= wid <= 232:
         return "rain"
-    elif 300 <= wid <= 321:
+    if 300 <= wid <= 321:
         return "rain"
-    elif 500 <= wid <= 531:
+    if 500 <= wid <= 531:
         return "rain"
-    elif 600 <= wid <= 622:
+    if 600 <= wid <= 622:
         return "snow"
-    elif wid == 800:
+    if wid == 800:
         return "clear"
-    else:
-        return "clouds"
+
+    # ③ 兜底
+    return "clouds"
 
 def set_background(image_file):
     with open(image_file, "rb") as img:
@@ -78,9 +88,10 @@ if city:
 
     current = theme[weather_type]
 
+    # 背景
     set_background(current["bg"])
 
-    # 呼吸灯（不动你的设计）
+    # 呼吸灯（不动你的视觉设计）
     lamp_color = current["color"]
     st.markdown(
         f"""
@@ -105,7 +116,7 @@ if city:
         unsafe_allow_html=True
     )
 
-    # 信息显示（只做“看得清”处理）
+    # 城市信息（可读性兜底，不改结构）
     desc = data["weather"][0]["description"]
     temp = data["main"]["temp"]
 
@@ -117,7 +128,7 @@ if city:
             background: rgba(0,0,0,0.35);
             padding:10px;
             border-radius:12px;
-            width:220px;
+            width:240px;
             margin:0 auto;
         ">
             <b>{data['name']}</b><br>
@@ -128,4 +139,5 @@ if city:
         unsafe_allow_html=True
     )
 
+    # 音乐
     play_music(current["music"])
