@@ -2,15 +2,12 @@ import streamlit as st
 import requests
 import base64
 
-# ======================
-# 基本设置
-# ======================
 st.set_page_config(page_title="🌦 Weather Breathing Lamp", layout="centered")
 
 API_KEY = "f79b327c6e33c90c48948f41a5b62e38"
 
 # ======================
-# 工具函数
+# 获取天气
 # ======================
 def get_weather(city):
     url = (
@@ -20,19 +17,18 @@ def get_weather(city):
     res = requests.get(url)
     return res.json()
 
+# ✅ 关键修复：严格优先级判断
 def get_weather_type(data):
     weather_list = data.get("weather", [])
-    weather_mains = [w["main"] for w in weather_list]
+    mains = [w["main"] for w in weather_list]
 
-    # ⚠️ 关键修复点：遍历判断
-    if "Snow" in weather_mains:
+    if "Snow" in mains:
         return "snow"
-    elif "Rain" in weather_mains or "Drizzle" in weather_mains or "Thunderstorm" in weather_mains:
+    if any(w in mains for w in ["Rain", "Drizzle", "Thunderstorm"]):
         return "rain"
-    elif "Clear" in weather_mains:
+    if "Clear" in mains:
         return "clear"
-    else:
-        return "clouds"
+    return "clouds"
 
 def set_background(image_file):
     with open(image_file, "rb") as img:
@@ -53,8 +49,7 @@ def set_background(image_file):
 
 def play_music(audio_file):
     with open(audio_file, "rb") as audio:
-        audio_bytes = audio.read()
-    st.audio(audio_bytes, format="audio/mp3", autoplay=True)
+        st.audio(audio.read(), format="audio/mp3", autoplay=True)
 
 # ======================
 # UI
@@ -66,35 +61,16 @@ if city:
     data = get_weather(city)
 
     if data.get("cod") != 200:
-        st.error("❌ 无法获取城市天气，请检查城市名")
+        st.error("无法获取城市天气")
         st.stop()
 
     weather_type = get_weather_type(data)
 
-    # ======================
-    # 天气映射
-    # ======================
     theme = {
-        "clear": {
-            "color": "#FFD700",
-            "bg": "clear.jpg",
-            "music": "clear.mp3"
-        },
-        "clouds": {
-            "color": "#B0C4DE",
-            "bg": "clouds.jpg",
-            "music": "clouds.mp3"
-        },
-        "rain": {
-            "color": "#4A90E2",
-            "bg": "rain.jpg",
-            "music": "rain.mp3"
-        },
-        "snow": {
-            "color": "#E6F7FF",
-            "bg": "snow.jpg",
-            "music": "snow.mp3"
-        }
+        "clear":  {"color": "#FFD700", "bg": "clear.jpg",  "music": "clear.mp3"},
+        "clouds":{"color": "#B0C4DE", "bg": "clouds.jpg","music": "clouds.mp3"},
+        "rain":  {"color": "#4A90E2", "bg": "rain.jpg",  "music": "rain.mp3"},
+        "snow":  {"color": "#E6F7FF", "bg": "snow.jpg",  "music": "snow.mp3"},
     }
 
     current = theme[weather_type]
@@ -109,7 +85,7 @@ if city:
         <div style="
             width:320px;
             height:320px;
-            margin: 60px auto;
+            margin: 50px auto 20px;
             border-radius:50%;
             background: radial-gradient(circle, {lamp_color} 0%, rgba(0,0,0,0) 70%);
             box-shadow: 0 0 80px {lamp_color};
@@ -118,26 +94,29 @@ if city:
 
         <style>
         @keyframes breathe {{
-            0% {{
-                transform: scale(1);
-                box-shadow: 0 0 40px {lamp_color};
-            }}
-            50% {{
-                transform: scale(1.12);
-                box-shadow: 0 0 120px {lamp_color};
-            }}
-            100% {{
-                transform: scale(1);
-                box-shadow: 0 0 40px {lamp_color};
-            }}
+            0% {{ transform: scale(1); box-shadow: 0 0 40px {lamp_color}; }}
+            50% {{ transform: scale(1.12); box-shadow: 0 0 120px {lamp_color}; }}
+            100% {{ transform: scale(1); box-shadow: 0 0 40px {lamp_color}; }}
         }}
         </style>
         """,
         unsafe_allow_html=True
     )
 
+    # ✅ 信息显示（你说缺的这块）
+    description = data["weather"][0]["description"]
+    temp = data["main"]["temp"]
+
+    st.markdown(
+        f"""
+        <div style="text-align:center; font-size:18px;">
+            <b>{data['name']}</b><br>
+            {description}<br>
+            {temp:.1f} ℃
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
     # 音乐
     play_music(current["music"])
-
-    # 调试信息（你之后可以删）
-    st.caption(f"🌍 当前天气类型：{weather_type}")
