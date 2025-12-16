@@ -11,11 +11,17 @@ API_KEY = "f79b327c6e33c90c48948f41a5b62e38"  # ← 换成你自己的
 url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
 
 weather = None
-try:
-    data = requests.get(url).json()
+
+response = requests.get(url)
+data = response.json()
+
+st.write("调试信息：", data)  # ← 这一行很重要
+
+if response.status_code == 200:
     weather = data["weather"][0]["main"].lower()
-except:
-    st.warning("无法获取天气，请检查城市名")
+else:
+    st.error(f"获取天气失败：{data.get('message')}")
+
 
 # 根据真实天气设置颜色
 if weather == "clear":
@@ -61,4 +67,5 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
