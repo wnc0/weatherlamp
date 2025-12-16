@@ -1,25 +1,19 @@
 import streamlit as st
 import requests
 import os
+import base64
 
-# =====================
-# 页面基础设置
-# =====================
 st.set_page_config(page_title="Weather Lamp", layout="centered")
 
 API_KEY = "f79b327c6e33c90c48948f41a5b62e38"
 
-# =====================
-# 天气判断
-# =====================
 def map_weather(weather_list):
     mains = [w["main"].lower() for w in weather_list]
-
     if "snow" in mains:
         return "snow"
     if "rain" in mains or "drizzle" in mains:
         return "rain"
-    if "clouds" in mains or "mist" in mains or "fog" in mains:
+    if "clouds" in mains or "mist" in mains or "fog":
         return "clouds"
     return "clear"
 
@@ -47,19 +41,36 @@ WEATHER_CONFIG = {
     }
 }
 
-# =====================
-# UI
-# =====================
 st.title("🌦 Weather Breathing Lamp")
-
 city = st.text_input("请输入城市名")
+
+def set_background(image_path):
+    if not os.path.exists(image_path):
+        st.warning(f"⚠️ 找不到背景图片：{image_path}")
+        return
+
+    with open(image_path, "rb") as img:
+        encoded = base64.b64encode(img.read()).decode()
+
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url("data:image/jpg;base64,{encoded}");
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
 if city:
     url = (
         "https://api.openweathermap.org/data/2.5/weather"
         f"?q={city}&appid={API_KEY}&units=metric"
     )
-
     res = requests.get(url).json()
 
     if res.get("cod") != 200:
@@ -69,30 +80,10 @@ if city:
         weather_type = map_weather(res["weather"])
         config = WEATHER_CONFIG[weather_type]
 
+        set_background(config["image"])
+
         lamp_color = config["color"]
-        bg_image = config["image"]
-        music_file = config["music"]
 
-        # =====================
-        # 背景图
-        # =====================
-        st.markdown(
-            f"""
-            <style>
-            .stApp {{
-                background-image: url("{bg_image}");
-                background-size: cover;
-                background-position: center;
-                background-attachment: fixed;
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-
-        # =====================
-        # 呼吸灯
-        # =====================
         st.markdown(
             f"""
             <div style="
@@ -125,20 +116,12 @@ if city:
             unsafe_allow_html=True
         )
 
-        # =====================
-        # 音乐（存在才播放，不存在不报错）
-        # =====================
-        if os.path.exists(music_file):
-            st.audio(music_file, format="audio/mp3", autoplay=True, loop=True)
-        else:
-            st.warning(f"⚠️ 找不到音乐文件：{music_file}")
+        if os.path.exists(config["music"]):
+            st.audio(config["music"], autoplay=True, loop=True)
 
-        # =====================
-        # 文字信息
-        # =====================
         st.markdown(
             f"""
-            <div style="text-align:center; font-size:18px;">
+            <div style="text-align:center; font-size:18px; color:white;">
                 <p><b>{res["name"]}</b></p>
                 <p>{res["weather"][0]["description"]}</p>
                 <p>{res["main"]["temp"]} °C</p>
