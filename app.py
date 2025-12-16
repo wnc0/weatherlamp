@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import os
 
 # =====================
 # 页面基础设置
@@ -9,7 +10,7 @@ st.set_page_config(page_title="Weather Lamp", layout="centered")
 API_KEY = "f79b327c6e33c90c48948f41a5b62e38"
 
 # =====================
-# 天气判断逻辑（支持雪）
+# 天气判断
 # =====================
 def map_weather(weather_list):
     mains = [w["main"].lower() for w in weather_list]
@@ -23,9 +24,6 @@ def map_weather(weather_list):
     return "clear"
 
 
-# =====================
-# 天气 → 视觉 / 音乐 映射
-# =====================
 WEATHER_CONFIG = {
     "clear": {
         "color": "#FFD966",
@@ -93,7 +91,7 @@ if city:
         )
 
         # =====================
-        # 呼吸灯（立体渐变 + 阴影）
+        # 呼吸灯
         # =====================
         st.markdown(
             f"""
@@ -128,13 +126,15 @@ if city:
         )
 
         # =====================
-        # 自动播放音乐（重点）
+        # 音乐（存在才播放，不存在不报错）
         # =====================
-        audio_file = open(music_file, "rb")
-        st.audio(audio_file.read(), format="audio/mp3", autoplay=True, loop=True)
+        if os.path.exists(music_file):
+            st.audio(music_file, format="audio/mp3", autoplay=True, loop=True)
+        else:
+            st.warning(f"⚠️ 找不到音乐文件：{music_file}")
 
         # =====================
-        # 天气文字信息
+        # 文字信息
         # =====================
         st.markdown(
             f"""
