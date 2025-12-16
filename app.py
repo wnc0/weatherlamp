@@ -14,21 +14,24 @@ def get_weather(city):
         "https://api.openweathermap.org/data/2.5/weather"
         f"?q={city}&appid={API_KEY}&units=metric"
     )
-    res = requests.get(url)
-    return res.json()
+    return requests.get(url).json()
 
-# ✅ 关键修复：严格优先级判断
+# ✅ 唯一正确判断方式：weather.id
 def get_weather_type(data):
-    weather_list = data.get("weather", [])
-    mains = [w["main"] for w in weather_list]
+    wid = data["weather"][0]["id"]
 
-    if "Snow" in mains:
-        return "snow"
-    if any(w in mains for w in ["Rain", "Drizzle", "Thunderstorm"]):
+    if 200 <= wid <= 232:
         return "rain"
-    if "Clear" in mains:
+    elif 300 <= wid <= 321:
+        return "rain"
+    elif 500 <= wid <= 531:
+        return "rain"
+    elif 600 <= wid <= 622:
+        return "snow"
+    elif wid == 800:
         return "clear"
-    return "clouds"
+    else:
+        return "clouds"
 
 def set_background(image_file):
     with open(image_file, "rb") as img:
@@ -75,17 +78,16 @@ if city:
 
     current = theme[weather_type]
 
-    # 背景
     set_background(current["bg"])
 
-    # 呼吸灯
+    # 呼吸灯（不动你的设计）
     lamp_color = current["color"]
     st.markdown(
         f"""
         <div style="
             width:320px;
             height:320px;
-            margin: 50px auto 20px;
+            margin: 50px auto 15px;
             border-radius:50%;
             background: radial-gradient(circle, {lamp_color} 0%, rgba(0,0,0,0) 70%);
             box-shadow: 0 0 80px {lamp_color};
@@ -103,20 +105,27 @@ if city:
         unsafe_allow_html=True
     )
 
-    # ✅ 信息显示（你说缺的这块）
-    description = data["weather"][0]["description"]
+    # 信息显示（只做“看得清”处理）
+    desc = data["weather"][0]["description"]
     temp = data["main"]["temp"]
 
     st.markdown(
         f"""
-        <div style="text-align:center; font-size:18px;">
+        <div style="
+            text-align:center;
+            color:white;
+            background: rgba(0,0,0,0.35);
+            padding:10px;
+            border-radius:12px;
+            width:220px;
+            margin:0 auto;
+        ">
             <b>{data['name']}</b><br>
-            {description}<br>
+            {desc}<br>
             {temp:.1f} ℃
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    # 音乐
     play_music(current["music"])
