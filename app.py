@@ -1,71 +1,63 @@
 import streamlit as st
-from PIL import Image
 import requests
-from io import BytesIO
 
-# 页面设置
-st.set_page_config(page_title="Weather Emotion Lamp", layout="centered")
+st.set_page_config(page_title="Weather Lamp", layout="centered")
 
-st.title("🌐 Weather Emotion Lamp")
+st.title("🌦 Weather Emotion Lamp")
 
-# 输入城市
 city = st.text_input("请输入城市名", "Seoul")
 
-# 模拟天气数据（真实可改成API）
-city_lower = city.lower()
-if city_lower in ["seoul", "beijing", "tokyo"]:
-    weather = "sunny"
-    lamp_color = "#FFD93D"
-    bg_url = "https://images.unsplash.com/photo-1502082553048-f009c37129b9"  # 晴天背景
-    music_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
-elif city_lower in ["london", "seattle"]:
-    weather = "cloudy"
-    lamp_color = "#6CA0DC"
-    bg_url = "https://images.unsplash.com/photo-1501594907352-04cda38ebc29"  # 阴天背景
-    music_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
+API_KEY = "YOUR_API_KEY_HERE"  # ← 换成你自己的
+url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
+
+weather = None
+try:
+    data = requests.get(url).json()
+    weather = data["weather"][0]["main"].lower()
+except:
+    st.warning("无法获取天气，请检查城市名")
+
+# 根据真实天气设置颜色
+if weather == "clear":
+    lamp_color = "#FFD93D"   # 晴
+elif weather == "clouds":
+    lamp_color = "#6CA0DC"   # 阴
+elif weather == "rain":
+    lamp_color = "#4A6FA5"   # 雨
+elif weather == "snow":
+    lamp_color = "#E6F0FF"   # 雪
 else:
-    weather = "other"
-    lamp_color = "#A9A9A9"
-    bg_url = "https://images.unsplash.com/photo-1506744038136-46273834b3fb"  # 其他背景
-    music_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+    lamp_color = "#999999"
 
-# 背景图片
-st.markdown(
-    f"""
-    <style>
-    .stApp {{
-        background-image: url("{bg_url}");
-        background-size: cover;
-        background-position: center;
-    }}
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# 呼吸灯效果
+# 呼吸灯（中心实色 → 边缘透明 + 立体感）
 st.markdown(
     f"""
     <div style="
-        width:300px;
-        height:300px;
-        margin:auto;
+        width:320px;
+        height:320px;
+        margin: 40px auto;
         border-radius:50%;
         background: radial-gradient(circle, {lamp_color} 0%, rgba(0,0,0,0) 70%);
-        box-shadow: 0 0 40px {lamp_color};
-        animation: breathe 2s infinite alternate;
+        box-shadow: 0 0 60px {lamp_color};
+        animation: breathe 3s ease-in-out infinite;
     "></div>
 
     <style>
     @keyframes breathe {{
-        0% {{ transform: scale(1); box-shadow: 0 0 20px {lamp_color}; }}
-        50% {{ transform: scale(1.1); box-shadow: 0 0 50px {lamp_color}; }}
-        100% {{ transform: scale(1); box-shadow: 0 0 20px {lamp_color}; }}
+        0% {{
+            transform: scale(1);
+            box-shadow: 0 0 30px {lamp_color};
+        }}
+        50% {{
+            transform: scale(1.1);
+            box-shadow: 0 0 80px {lamp_color};
+        }}
+        100% {{
+            transform: scale(1);
+            box-shadow: 0 0 30px {lamp_color};
+        }}
     }}
     </style>
     """,
     unsafe_allow_html=True
 )
-
-# 音乐播放
-st.audio(music_url, format="audio/mp3")
