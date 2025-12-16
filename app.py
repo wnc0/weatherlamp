@@ -1,20 +1,42 @@
 import streamlit as st
 import requests
 import base64
+from datetime import datetime
 
 st.set_page_config(page_title="🌦 Weather Breathing Lamp", layout="centered")
 
 API_KEY = "f79b327c6e33c90c48948f41a5b62e38"
 
 # ======================
-# 获取天气
+# 获取未来天气（关键）
 # ======================
-def get_weather(city):
+def get_forecast(city):
     url = (
-        "https://api.openweathermap.org/data/2.5/weather"
+        "https://api.openweathermap.org/data/2.5/forecast"
         f"?q={city}&appid={API_KEY}&units=metric"
     )
     return requests.get(url).json()
+
+def decide_weather_type(data):
+    forecast_list = data.get("list", [])
+
+    # 只看未来 24 小时（8 个 3h 数据）
+    next_24h = forecast_list[:8]
+
+    for item in next_24h:
+        wid = item["weather"][0]["id"]
+
+        if "snow" in item or 600 <= wid <= 622:
+            return "snow"
+        if "rain" in item or 500 <= wid <= 531 or 300 <= wid <= 321:
+            return "rain"
+
+    # 如果未来 24 小时都没降水，再看最近一次
+    wid = forecast_list[0]["weather"][0]["id"]
+
+    if wid == 800:
+        return "clear"
+    return "clouds"
 
 def set_background(image_file):
     with open(image_file, "rb") as img:
@@ -41,42 +63,16 @@ def play_music(audio_file):
 # UI
 # ======================
 st.title("🌦 Weather Breathing Lamp")
-
 city = st.text_input("请输入城市名")
 
-# ✅ 关键新增：展示模式（兜底）
-mode = st.selectbox(
-    "展示模式（用于演示）",
-    ["自动（真实天气）", "晴天", "阴天", "雨天", "雪天"]
-)
-
 if city:
-    data = get_weather(city)
+    data = get_forecast(city)
 
-    if data.get("cod") != 200:
+    if data.get("cod") != "200":
         st.error("无法获取城市天气")
         st.stop()
 
-    # ======================
-    # 天气决定逻辑
-    # ======================
-    if mode != "自动（真实天气）":
-        weather_type = {
-            "晴天": "clear",
-            "阴天": "clouds",
-            "雨天": "rain",
-            "雪天": "snow"
-        }[mode]
-    else:
-        # 真实天气（保守）
-        if "snow" in data:
-            weather_type = "snow"
-        elif "rain" in data:
-            weather_type = "rain"
-        elif data["weather"][0]["id"] == 800:
-            weather_type = "clear"
-        else:
-            weather_type = "clouds"
+    weather_type = decide_weather_type(data)
 
     theme = {
         "clear":  {"color": "#FFD700", "bg": "clear.jpg",  "music": "clear.mp3"},
@@ -87,10 +83,8 @@ if city:
 
     current = theme[weather_type]
 
-    # 背景
     set_background(current["bg"])
 
-    # 呼吸灯
     lamp_color = current["color"]
     st.markdown(
         f"""
@@ -115,7 +109,10 @@ if city:
         unsafe_allow_html=True
     )
 
-    # 城市信息
+    now = data["list"][0]
+    desc = now["weather"][0]["description"]
+    temp = now["main"]["temp"]
+
     st.markdown(
         f"""
         <div style="
@@ -124,12 +121,12 @@ if city:
             background: rgba(0,0,0,0.35);
             padding:10px;
             border-radius:12px;
-            width:240px;
+            width:260px;
             margin:0 auto;
         ">
-            <b>{data['name']}</b><br>
-            {data['weather'][0]['description']}<br>
-            {data['main']['temp']:.1f} ℃
+            <b>{data['city']['name']}</b><br>
+            {desc}<br>
+            {temp:.1f} ℃
         </div>
         """,
         unsafe_allow_html=True
