@@ -15,7 +15,7 @@ weather = None
 response = requests.get(url)
 data = response.json()
 
-st.write("调试信息：", data)  # ← 这一行很重要
+# st.write("调试信息：", data)  # ← 这一行很重要
 
 if response.status_code == 200:
     weather = data["weather"][0]["main"].lower()
@@ -67,5 +67,6 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 
