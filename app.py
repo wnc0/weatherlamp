@@ -16,33 +16,6 @@ def get_weather(city):
     )
     return requests.get(url).json()
 
-# ======================
-# ✅ 方案 C：双保险判断
-# ======================
-def get_weather_type(data):
-    wid = data["weather"][0]["id"]
-
-    # ① 最优先：真实降水字段（展示用，最稳定）
-    if "snow" in data:
-        return "snow"
-    if "rain" in data:
-        return "rain"
-
-    # ② 次优先：官方天气代码
-    if 200 <= wid <= 232:
-        return "rain"
-    if 300 <= wid <= 321:
-        return "rain"
-    if 500 <= wid <= 531:
-        return "rain"
-    if 600 <= wid <= 622:
-        return "snow"
-    if wid == 800:
-        return "clear"
-
-    # ③ 兜底
-    return "clouds"
-
 def set_background(image_file):
     with open(image_file, "rb") as img:
         encoded = base64.b64encode(img.read()).decode()
@@ -68,7 +41,14 @@ def play_music(audio_file):
 # UI
 # ======================
 st.title("🌦 Weather Breathing Lamp")
+
 city = st.text_input("请输入城市名")
+
+# ✅ 关键新增：展示模式（兜底）
+mode = st.selectbox(
+    "展示模式（用于演示）",
+    ["自动（真实天气）", "晴天", "阴天", "雨天", "雪天"]
+)
 
 if city:
     data = get_weather(city)
@@ -77,7 +57,26 @@ if city:
         st.error("无法获取城市天气")
         st.stop()
 
-    weather_type = get_weather_type(data)
+    # ======================
+    # 天气决定逻辑
+    # ======================
+    if mode != "自动（真实天气）":
+        weather_type = {
+            "晴天": "clear",
+            "阴天": "clouds",
+            "雨天": "rain",
+            "雪天": "snow"
+        }[mode]
+    else:
+        # 真实天气（保守）
+        if "snow" in data:
+            weather_type = "snow"
+        elif "rain" in data:
+            weather_type = "rain"
+        elif data["weather"][0]["id"] == 800:
+            weather_type = "clear"
+        else:
+            weather_type = "clouds"
 
     theme = {
         "clear":  {"color": "#FFD700", "bg": "clear.jpg",  "music": "clear.mp3"},
@@ -91,7 +90,7 @@ if city:
     # 背景
     set_background(current["bg"])
 
-    # 呼吸灯（不动你的视觉设计）
+    # 呼吸灯
     lamp_color = current["color"]
     st.markdown(
         f"""
@@ -116,10 +115,7 @@ if city:
         unsafe_allow_html=True
     )
 
-    # 城市信息（可读性兜底，不改结构）
-    desc = data["weather"][0]["description"]
-    temp = data["main"]["temp"]
-
+    # 城市信息
     st.markdown(
         f"""
         <div style="
@@ -132,12 +128,11 @@ if city:
             margin:0 auto;
         ">
             <b>{data['name']}</b><br>
-            {desc}<br>
-            {temp:.1f} ℃
+            {data['weather'][0]['description']}<br>
+            {data['main']['temp']:.1f} ℃
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    # 音乐
     play_music(current["music"])
